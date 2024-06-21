@@ -19,15 +19,19 @@ def handle_client(client_socket, client_address):
                 break
             print(f"[RECEIVED] {data} from {client_address}")
 
-            username, password = data.split(':')
+            try:
+                login_data = json.loads(data)
+                username = login_data.get("username")
+                password = login_data.get("password")
 
-            # check valid
-            if username in users and users[username] == password:
-                response = json.dumps({"status": "success", "message": "LOGIN SUCCESSFUL"})
-            else:
-                response = json.dumps({"status": "fail", "message": "INVALID CREDENTIALS"})
+                if username in users and users[username] == password:
+                    response = {"status": "success", "message": "LOGIN SUCCESS"}
+                else:
+                    response = {"status": "fail", "message": "LOGIN FAILED"}
+            except json.JSONDecodeError:
+                response = {"status": "error", "message": "Invalid JSON"}
+            client_socket.send(json.dumps(response).encode('utf-8'))
 
-            client_socket.send(response.encode('utf-8'))
     except Exception as e:
         print(f"[EXCEPTION] {e}")
     finally:
