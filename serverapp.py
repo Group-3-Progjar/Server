@@ -114,7 +114,7 @@ class ChatServer:
             return self.register(payload)
         elif command == 'RESEND_OTP':
             return self.resend_otp(payload)
-        elif command == 'SEND_OTP':  # Corrected here
+        elif command == 'SEND_OTP':
             return self.send_otp(payload)
         elif command == 'SEND_CHAT':
             return self.send_chat(payload)
@@ -239,29 +239,20 @@ class ChatServer:
         # Sort the leaderboard by score from biggest to lowest
         self.leaderboard = sorted(self.leaderboard, key=lambda x: x['score'], reverse=True)
 
-        # Find the users with scores above the given score
-        user_index = next((index for (index, d) in enumerate(self.leaderboard) if d["username"] == username), None)
-
-        players_with_score_above_user = []
-        if user_index > 0:
-            players_with_score_above_user = [{'username': self.leaderboard[i]['username'], 'score': self.leaderboard[i]['score'], 'place': i + 1} for i in range(min(2, user_index))]
-
-        self.broadcast_top_10_players()
+        self.broadcast_leaderboard()
 
         response = {
             "success": True,
             "message": "Progress updated",
-            "players": players_with_score_above_user
         }
         return 'RESPONSE;' + json.dumps(response)
 
-    def broadcast_top_10_players(self):
-        top_10_players = [{'username': user['username'], 'score': user['score'], 'place': idx + 1} for idx, user in enumerate(self.leaderboard[:10])]
-        broadcast_message = {
-            "message": "Top 10 players updated",
-            "players": top_10_players
+    def broadcast_leaderboard(self):
+        leaderboard_message = {
+            "message": "Leaderboard updated",
+            "leaderboard": self.leaderboard
         }
-        self.broadcast(f"LEADERBOARD;{json.dumps(broadcast_message)}")
+        self.broadcast(f"LEADERBOARD;{json.dumps(leaderboard_message)}")
 
     def update_skin(self, payload):
         username = payload.get('username')
