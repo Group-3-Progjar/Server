@@ -41,6 +41,7 @@ class ChatServer:
         self.clients = []
         self.leaderboard = []  # [{"username", "score", "id"}]
         self.users = {}  # Global dictionary to store user data
+        self.logged_in_users = set()  # Set to track logged in users
         self.lock = threading.Lock()
         self.add_dummy_users()
         self.cmds = [
@@ -79,6 +80,7 @@ class ChatServer:
                     self.clients.remove(client)
 
     def handle_client(self, client_socket):
+        username = None
         while True:
             try:
                 data = client_socket.recv(1024).decode('utf-8')
@@ -91,12 +93,18 @@ class ChatServer:
                 response = self.handle_command(command, payload)
                 client_socket.sendall(response.encode('utf-8'))
 
+                if command == 'LOGIN' and json.loads(response.split(';', 1)[1])['success']:
+                    username = payload['username']
+                    self.logged_in_users.add(username)
+
             except Exception as e:
                 print(f"Error: {e}")
                 break
 
         with self.lock:
             self.clients.remove(client_socket)
+            if username:
+                self.logged_in_users.remove(username)
         client_socket.close()
 
     def handle_command(self, command, payload):
@@ -125,6 +133,9 @@ class ChatServer:
         
         if not username or not password:
             return 'RESPONSE;{"success": false, "message": "Username and password are required"}'
+        
+        if username in self.logged_in_users:
+            return 'RESPONSE;{"success": false, "message": "User already logged in"}'
         
         if username not in self.users:
             return 'RESPONSE;{"success": false, "message": "User not found"}'
